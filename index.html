@@ -261,6 +261,118 @@
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
         }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .left-panel {
+                padding: 10px;
+                overflow-y: visible;
+            }
+
+            .right-panel {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .header {
+                padding: 15px 10px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .subtitle {
+                font-size: 0.85em;
+            }
+
+            #globeContainer {
+                min-height: 300px;
+                margin: 10px;
+            }
+
+            .pulse-button-container {
+                padding: 15px;
+            }
+
+            .pulse-button {
+                width: 120px;
+                height: 120px;
+                font-size: 1em;
+            }
+
+            .stats-grid {
+                padding: 15px;
+                gap: 8px;
+            }
+
+            .stat-box {
+                padding: 10px;
+            }
+
+            .stat-number {
+                font-size: 1.5em;
+            }
+
+            .stat-label {
+                font-size: 0.75em;
+            }
+
+            .timeline-section {
+                padding: 15px;
+            }
+
+            .timeline-title {
+                font-size: 1em;
+            }
+
+            .timeline-graph {
+                height: 120px;
+            }
+
+            .synchronized-moments {
+                max-height: 200px;
+            }
+
+            .connection-status, .location-permission {
+                margin: 10px 15px;
+                font-size: 0.8em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.3em;
+            }
+
+            .subtitle {
+                font-size: 0.8em;
+            }
+
+            .pulse-button {
+                width: 100px;
+                height: 100px;
+                font-size: 0.9em;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 10px;
+            }
+
+            .stat-number {
+                font-size: 1.3em;
+            }
+
+            .timeline-graph {
+                height: 100px;
+            }
+        }
     </style>
 </head>
 <body>
