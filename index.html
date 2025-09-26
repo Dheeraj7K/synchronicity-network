@@ -434,7 +434,13 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
+        const SOCKET_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001' 
+            : 'YOUR_BACKEND_URL_HERE';
+        
+        let socket;
         let scene, camera, renderer, globe, pulseMarkers = [];
         let yourPulsesCount = 0;
         let globalPulsesCount = 0;
@@ -563,6 +569,11 @@
         }
 
         function sendPulse() {
+            if (!socket || !socket.connected) {
+                alert('Not connected to server. Please refresh the page.');
+                return;
+            }
+
             pulseBtn.classList.add('pulsing');
             setTimeout(() => pulseBtn.classList.remove('pulsing'), 600);
 
@@ -572,52 +583,78 @@
                 lon: (Math.random() - 0.5) * 360
             };
 
-            yourPulsesCount++;
-            globalPulsesCount++;
-            yourPulsesEl.textContent = yourPulsesCount;
-            globalPulsesEl.textContent = globalPulsesCount;
-
-            const pulse = {
-                id: `pulse_${timestamp}_${Math.random()}`,
+            socket.emit('sendPulse', {
                 timestamp: timestamp,
                 lat: location.lat,
-                lon: location.lon,
-                isYours: true
-            };
-
-            pulseHistory.push(pulse);
-            addPulseToGlobe(location.lat, location.lon, true);
-            updateTimeline();
-            checkSynchronizedMoments(timestamp);
-            storePulses();
+                lon: location.lon
+            });
 
             navigator.vibrate && navigator.vibrate(200);
         }
 
-        function simulateGlobalPulse() {
-            if (Math.random() < 0.2) {
-                const timestamp = Date.now();
-                const lat = (Math.random() - 0.5) * 180;
-                const lon = (Math.random() - 0.5) * 360;
+        function initSocket() {
+            socket = io(SOCKET_URL, {
+                transports: ['websocket', 'polling']
+            });
 
-                const pulse = {
-                    id: `pulse_${timestamp}_${Math.random()}`,
-                    timestamp: timestamp,
-                    lat: lat,
-                    lon: lon,
+            socket.on('connect', () => {
+                console.log('✅ Connected to server');
+                document.querySelector('.connection-status').style.background = 'rgba(76, 175, 80, 0.3)';
+                socket.emit('requestRecentPulses');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('❌ Disconnected from server');
+                document.querySelector('.connection-status').style.background = 'rgba(244, 67, 54, 0.3)';
+            });
+
+            socket.on('recentPulses', (pulses) => {
+                pulseHistory = pulses.map(p => ({
+                    id: p._id,
+                    timestamp: p.timestamp,
+                    lat: p.lat,
+                    lon: p.lon,
                     isYours: false
-                };
+                }));
 
+                yourPulsesCount = pulseHistory.filter(p => p.isYours).length;
+                globalPulsesCount = pulseHistory.length;
+                
+                yourPulsesEl.textContent = yourPulsesCount;
+                globalPulsesEl.textContent = globalPulsesCount;
+                
+                updateTimeline();
+                updateSynchronizedMomentsList();
+            });
+
+            socket.on('newPulse', (pulse) => {
                 pulseHistory.push(pulse);
                 globalPulsesCount++;
                 globalPulsesEl.textContent = globalPulsesCount;
-                addPulseToGlobe(lat, lon, false);
+                addPulseToGlobe(pulse.lat, pulse.lon, false);
                 updateTimeline();
-                checkSynchronizedMoments(timestamp);
+                checkSynchronizedMoments(pulse.timestamp);
+            });
 
-                const connectedCount = Math.floor(Math.random() * 50) + 1;
-                connectedUsersEl.textContent = connectedCount;
-            }
+            socket.on('pulseConfirmed', (pulse) => {
+                yourPulsesCount++;
+                globalPulsesCount++;
+                yourPulsesEl.textContent = yourPulsesCount;
+                globalPulsesEl.textContent = globalPulsesCount;
+
+                pulseHistory.push(pulse);
+                addPulseToGlobe(pulse.lat, pulse.lon, true);
+                updateTimeline();
+                checkSynchronizedMoments(pulse.timestamp);
+            });
+
+            socket.on('userCount', (count) => {
+                connectedUsersEl.textContent = count;
+            });
+
+            socket.on('error', (message) => {
+                console.error('Server error:', message);
+            });
         }
 
         function updateTimeline() {
@@ -736,36 +773,12 @@
             activeMomentId = momentId;
         }
 
-        function storePulses() {
-            localStorage.setItem('synchronicityPulses', JSON.stringify(pulseHistory));
-        }
-
-        function loadStoredPulses() {
-            const stored = localStorage.getItem('synchronicityPulses');
-            if (stored) {
-                pulseHistory = JSON.parse(stored);
-                
-                const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-                pulseHistory = pulseHistory.filter(p => p.timestamp > oneDayAgo);
-                
-                yourPulsesCount = pulseHistory.filter(p => p.isYours).length;
-                globalPulsesCount = pulseHistory.length;
-                
-                yourPulsesEl.textContent = yourPulsesCount;
-                globalPulsesEl.textContent = globalPulsesCount;
-                
-                updateTimeline();
-                updateSynchronizedMomentsList();
-            }
-        }
-
         pulseBtn.addEventListener('click', sendPulse);
 
         initGlobe();
+        initSocket();
         requestLocation();
-        loadStoredPulses();
         
-        setInterval(simulateGlobalPulse, 4000);
         setInterval(updateTimeline, 5000);
     </script>
 </body>
